@@ -1,0 +1,225 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+from tkinter import *
+import logging
+import PyPDF2
+import shutil
+import time
+import os
+
+
+# ___________Tkinter code for UI_______________
+ws = Tk()
+ws.title("Dynamic Forms Retriever")
+ws.geometry('700x800')
+ws['bg'] = 'indigo'
+
+
+def printValue():
+    full_Label = fullpath_Label.get()
+    final_Label = finalpath_Label.get()
+    Chrome_Label = chrome_extension.get()
+    try:
+
+        # -------------------Method for merging pdf -------------------------- !
+
+        def mergePdf(num):
+            mergedObject = PyPDF2.PdfFileMerger(strict=False)
+            fullPath = full_Label
+            finalPath = final_Label
+            destFolder = finalPath+'\Merged_Folder_'+str(num)
+            # Copying the downloaded pdfs to Merged Folder
+            shutil.copytree(fullPath, destFolder)
+            dd = os.listdir(fullPath)
+            gg = []
+
+            # Creating File Merger Object
+            mergedObject = PyPDF2.PdfFileMerger(strict=False)
+
+            try:
+                for i in dd:
+                    filepath = os.path.join(fullPath, i)
+                    if i.startswith('ViewPDF'):
+                        mergedObject.append(
+                            PyPDF2.PdfFileReader(filepath, strict=False))
+
+                    else:
+                        gg.append(i)
+                for i in gg:
+                    filepath = os.path.join(fullPath, i)
+                    mergedObject.append(
+                        PyPDF2.PdfFileReader(filepath, strict=False))
+
+                # ----------------Code to create a final document in the final path and copy the contents of the reader--------!
+
+                output = os.path.join(finalPath, 'Merged_Pdf_'+str(num)+'.pdf')
+                mergedObject.write(output)
+                # Removing the downloaded Pdfs in fullPath folder
+                for i in range(len(dd)):
+                    os.remove(os.path.join(fullPath, dd[i]))
+            except:
+                # Removing the downloaded Pdfs in fullPath folder
+                for i in range(len(dd)):
+                    os.remove(os.path.join(fullPath, dd[i]))
+
+        def clickDownload():
+            # ------------------------Code to 'Click the PDF' dowload button in new window -----------------------!
+            invoicePdf = driver.find_element_by_xpath(
+                "//*[@id='main']/div[1]/div[1]/a")
+
+            driver.get(invoicePdf.get_attribute('href'))
+
+            time.sleep(5)
+            driver.back()
+
+        # ----------- Importing the webdriver and setting the options ------------------- !
+        options = webdriver.ChromeOptions()
+
+        options.add_experimental_option('prefs', {
+            # Change default directory for downloads
+            "download.default_directory": full_Label,
+            "download.prompt_for_download": False,  # To auto download the file
+            "download.directory_upgrade": True,
+            # It will not show PDF directly in chrome
+            "plugins.always_open_pdf_externally": True
+        })
+
+        # -------------------create webdriver object------------------!
+        driver = webdriver.Chrome(
+            executable_path=Chrome_Label+'\chromedriver.exe', chrome_options=options)
+
+        # --------------------- Login to dynamic forms link-------------!
+        driver.get("https://dynamicforms.ngwebsolutions.com")
+        time.sleep(30)
+
+        # --------------------code for getting multipending URL(dummy)---------------------------!
+
+        #dd=driver.find_element_by_xpath("//*[@id='Grid']/table/tbody/tr[7]/td[6]/a") -- dummy
+
+        dd = driver.find_element_by_xpath(
+            "//*[@id='Grid']/table/tbody/tr[3]/td[6]/a")
+        ll = dd.get_attribute('href')
+        llCount = int(dd.get_attribute('data-formcount'))
+        driver.get(ll)
+        time.sleep(15)
+
+        for i in range(1, 26):
+
+            # -------------------------code for clicking complete form button-----------------------!
+            l = driver.find_element_by_xpath(
+                "//*[@id='Grid']/div[2]/table/tbody/tr["+str(i)+"]/td[7]/button[text()='Complete Form']")
+
+            try:
+                driver.implicitly_wait(10)
+                ActionChains(driver).move_to_element(l).click(l).perform()
+                time.sleep(10)
+
+                # -----------------------Code to jump to new window-------------------------!
+                driver.switch_to.window(driver.window_handles[1])
+                time.sleep(5)
+
+                # ------------------For clicking the button Complete This Form in the new window ---------------------!
+                button2 = driver.find_element_by_xpath(
+                    "//*[@id='WelcomeForm']/div/div/button")
+                button2.click()
+
+                # ----------------------------Code to download the invoice attachments--------------!
+
+                try:
+                    fsUpload_1Pdf = driver.find_element_by_xpath(
+                        "/html/body/main/form[3]/div/div/div[2]/table/tbody/tr[7]/td/table/tbody/tr[3]/td/table/tbody/tr/td[4]/div/div/div[2]/span/a")
+
+                    if fsUpload_1Pdf:
+                        driver.get(fsUpload_1Pdf.get_attribute('href'))
+                        time.sleep(10)
+                        clickDownload()
+                        time.sleep(10)
+                except:
+                    pass
+
+                try:
+
+                    fsUpload_2Pdf = driver.find_element_by_xpath(
+                        "/html/body/main/form[3]/div/div/div[2]/table/tbody/tr[7]/td/table/tbody/tr[5]/td/table/tbody/tr/td[4]/div/div/div[2]/span/a")
+
+                    if fsUpload_2Pdf:
+                        driver.get(fsUpload_2Pdf.get_attribute('href'))
+                        time.sleep(10)
+                        clickDownload()
+                        time.sleep(10)
+                except:
+                    pass
+                try:
+                    invoicePdf = driver.find_element_by_xpath(
+                        "/html/body/main/form[3]/div/div/div[2]/table/tbody/tr[9]/td/table/tbody/tr[1]/td/div/div/div[2]/span/a")
+                    if invoicePdf:
+                        driver.get(invoicePdf.get_attribute('href'))
+                        time.sleep(10)
+                        clickDownload()
+                        time.sleep(10)
+                except:
+                    pass
+
+                try:
+                    additional_Pdf = driver.find_element_by_xpath(
+                        "/html/body/main/form[3]/div/div/div[2]/table/tbody/tr[10]/td/table/tbody/tr/td[1]/div/div/div[2]/span/a")
+                    if additional_Pdf:
+                        driver.get(additional_Pdf.get_attribute('href'))
+                        time.sleep(10)
+                        clickDownload()
+                        time.sleep(10)
+                except:
+                    pass
+
+                # -------------------------Code to click Next---------------------------!
+
+                nextButton = driver.find_element_by_xpath(
+                    "//*[@id='NextButton']")
+                nextButton.click()
+
+                # ----------------------------------Code to click view Pdf and download the file--------------!
+
+                finalPdf = driver.find_element_by_xpath(
+                    "//*[@id='main']/div/div/div/div[2]/a").get_attribute('href')
+                driver.get(finalPdf)
+                time.sleep(10)
+                driver.switch_to.window(driver.window_handles[0])
+                time.sleep(5)
+
+                # ----------------------------Method to call merge Pdfs----------------------------- !
+                mergePdf(i)
+            except:
+                pass
+
+        Label(ws, text='Done!', pady=20).pack()
+    except Exception as eg:
+        Label(ws, text='Error!', pady=20).pack()
+        f = open(os.environ['APPDATA']+'\\toolError.txt', 'a')
+        f.write(str(eg))
+        f.close()
+
+# ----------------- File Path and Retrieve buttons -------------------------!
+
+
+fullpath_Label = Entry(ws)
+Label(text='ENTER THE PATH( Where the invoices need to be downloaded ) - ').pack(side=TOP, padx=40, pady=60)
+fullpath_Label.pack(pady=5)
+
+
+finalpath_Label = Entry(ws)
+Label(text='ENTER THE PATH( Where the merged invoices should be stored ) - ').pack(side=TOP, padx=40, pady=70)
+finalpath_Label.pack(pady=5)
+
+
+chrome_extension = Entry(ws)
+Label(text='ENTER THE PATH OF THE CHROME EXTENSION - ').pack(side=TOP, padx=40, pady=80)
+chrome_extension.pack(pady=5)
+
+
+Retrieve_button = Button(
+    ws, text="RETRIEVE", command=printValue).place(x=320, y=680)
+
+
+ws.mainloop()
